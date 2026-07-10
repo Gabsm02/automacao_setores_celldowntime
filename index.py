@@ -4,6 +4,9 @@ import tempfile
 import shutil
 import os
 import matplotlib.pyplot as plt
+import requests
+import time
+import urllib3
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,10 +15,11 @@ load_dotenv()
 # ===============================================================
 # CONFIGURAÇÕES
 # ===============================================================
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 PLANILHA_INTERNA = os.getenv("PLANILHA_INTERNA")
-CAMINHO_ZIP = os.getenv("CAMINHO_ZIP")
 CAMINHO_BASE = os.getenv("CAMINHO_BASE")
 ARQUIVO_FINAL = os.getenv("ARQUIVO_FINAL")
+LINK_DOWNLOAD_ZIP = os.getenv("LINK_DOWNLOAD_ZIP")
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -25,9 +29,6 @@ pd.set_option('future.no_silent_downcasting', True)
 # ===============================================================
 
 def limpar_valor(x):
-    """
-    Converte valores removendo .0 de floats inteiros
-    """
     if pd.isna(x):
         return ""
     if isinstance(x, float) and x.is_integer():
@@ -36,10 +37,6 @@ def limpar_valor(x):
 
 
 def forcar_colunas_para_string(df):
-    """
-    Força colunas textuais para string sem gerar 'None' ou 'nan'
-    e remove .0 de números inteiros
-    """
     colunas_texto = [
         'IMPACTO', 'AFETACAO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
         'RESPONSÁVEL', 'PRAZO', 'MODELO', 'COD. MODELO',
@@ -54,9 +51,6 @@ def forcar_colunas_para_string(df):
 
 
 def formatar_data_br(df, colunas_data):
-    """
-    Converte colunas de data para DD/MM/AAAA
-    """
     for col in colunas_data:
         if col in df.columns:
             df[col] = pd.to_datetime(
@@ -68,6 +62,30 @@ def formatar_data_br(df, colunas_data):
             df[col] = df[col].fillna("")
 
     return df
+
+def baixar_zip(url, pasta_destino):
+    print('Iniciando download...')
+    response = requests.get(url, stream=True, timeout=60, verify=False)
+    response.raise_for_status()
+
+    nome_arquivo = None
+    content_disposition = response.headers.get('content-disposition')
+
+    if content_disposition and 'filename=' in content_disposition:
+        nome_arquivo = content_disposition.split('filename=')[-1].strip('";')
+
+    if not nome_arquivo: 
+        nome_arquivo = f"setores_celldowntime_hmm_{int(time.time())}.zip"
+
+    caminho_zip = os.path.join(pasta_destino, nome_arquivo)
+
+    with open(caminho_zip, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    print("Download finalizado !")
+    
+    return caminho_zip
 
 def extrair_planilhas(caminho_zip, pasta_destino):
     nomes_esperados = ["Setores_CellDowntime_HMM_NE_0", "Setores_CellDowntime_HMM_NE_1"]
@@ -118,9 +136,6 @@ def carregar_dados_maestro(caminho, aba='Sheet1'):
 def carregar_planilha_sem_cabecalho(caminho, colunas_referencia, aba='Sheet1'):
     df = pd.read_excel(caminho, sheet_name=aba, engine='openpyxl', header=None)
 
-    # if df.shape[1] != len(colunas_referencia):
-    #     raise ValueError(f"")
-
     df.columns = colunas_referencia
     return df
 
@@ -132,7 +147,6 @@ def processar_filtros_e_agrupamento(df):
     cols_preencher = ['REGIONAL', 'UF', 'MUNICIPIO', 'CN', 'SITE', 'TECNOLOGIA', 'ERB']
     df[cols_preencher] = df[cols_preencher].ffill()
 
-    # Filtros
     df_para_filtro = df.drop(columns=['ORIGEM_ARQUIVO'], errors='ignore')
     df = df[(df_para_filtro.iloc[:,-1] >= 500) & (df_para_filtro.iloc[:, -2] > 0)]
 
@@ -164,6 +178,8 @@ def aplicar_base_e_regras(df_trabalho, caminho_base):
         'RESPONSÁVEL', 'PRAZO', 'MODELO', 'COD. MODELO',
         'FABRICANTE', 'SS', 'BACKLOG'
     ]
+
+    
 
     for col in colunas_extras:
         df_trabalho[col] = None
@@ -204,7 +220,6 @@ def aplicar_base_e_regras(df_trabalho, caminho_base):
         merged.drop(columns=['_merge'], inplace=True)
         df_trabalho = merged[df_trabalho.columns].copy()
 
-    # Regras finais
     df_trabalho.loc[df_trabalho['STATUS MACRO'].isna(), 'STATUS MACRO'] = 'Em análise'
     df_trabalho.loc[df_trabalho['TOTAL DE SETORES'] == 3, 'IMPACTO'] = 'Total'
     df_trabalho.loc[df_trabalho['TOTAL DE SETORES'] != 3, 'IMPACTO'] = 'Parcial'
@@ -252,7 +267,8 @@ def main():
 
     try:
 
-        caminhos_planilhas = extrair_planilhas(CAMINHO_ZIP, pasta_temp)
+        caminho_zip_baixado = baixar_zip(LINK_DOWNLOAD_ZIP, pasta_temp)
+        caminhos_planilhas = extrair_planilhas(caminho_zip_baixado, pasta_temp)
         df_bruto = carregar_dados_maestro_combinado(caminhos_planilhas)
 
         df_filtrado = processar_filtros_e_agrupamento(df_bruto)
