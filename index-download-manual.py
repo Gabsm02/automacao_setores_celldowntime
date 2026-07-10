@@ -1,19 +1,19 @@
 import pandas as pd
+import zipfile
+import tempfile
+import shutil
 import os
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
 load_dotenv()
 
-print("PLANILHA_INTERNA:", os.getenv("PLANILHA_INTERNA"))
-print("CAMINHO_BASE:", os.getenv("CAMINHO_BASE"))
-print("ARQUIVO_FINAL:", os.getenv("ARQUIVO_FINAL"))
-
 
 # ===============================================================
 # CONFIGURAÇÕES
 # ===============================================================
 PLANILHA_INTERNA = os.getenv("PLANILHA_INTERNA")
+CAMINHO_ZIP = os.getenv("CAMINHO_ZIP")
 CAMINHO_BASE = os.getenv("CAMINHO_BASE")
 ARQUIVO_FINAL = os.getenv("ARQUIVO_FINAL")
 
@@ -69,6 +69,25 @@ def formatar_data_br(df, colunas_data):
 
     return df
 
+def extrair_planilhas(caminho_zip, pasta_destino):
+    nomes_esperados = ["Setores_CellDowntime_HMM_NE_0", "Setores_CellDowntime_HMM_NE_1"]
+
+    caminhos_extraidos = {}
+
+    with zipfile.ZipFile(caminho_zip, 'r') as zip_ref:
+        arquivos_no_zip = zip_ref.namelist()
+
+        for nome_esperado in nomes_esperados:
+            arquivo_encontrado = next((a for a in arquivos_no_zip if nome_esperado in a), None)
+
+        if arquivo_encontrado is None:
+            raise FileNotFoundError (
+                f"Arquivo '{nome_esperado}' não encontrado"
+            )
+        zip_ref.extract(arquivo_encontrado, pasta_destino)
+        caminhos_extraidos[nome_esperado] = os.path.join(pasta_destino, arquivo_encontrado)
+        return caminhos_extraidos
+
 
 # ===============================================================
 # PROCESSAMENTO DOS DADOS
@@ -95,6 +114,14 @@ def carregar_dados_maestro(caminho, aba='Sheet1'):
         header=linha_cabecalho
     )
 
+def carregar_planilha_sem_cabecalho(caminho, colunas_referencia, aba='Sheet1'):
+    df = pd.read_excel(caminho, sheet_name=aba, engine='openpyxl', header=None)
+
+    # if df.shape[1] != len(colunas_referencia):
+    #     raise ValueError(f"")
+
+    df.columns = colunas_referencia
+    return df
 
 def processar_filtros_e_agrupamento(df):
     print("Processando filtros e agrupamentos...")
@@ -112,6 +139,22 @@ def processar_filtros_e_agrupamento(df):
 
     return df_agrupado[df_agrupado['UF'] == 'BA'].copy()
 
+def carregar_dados_maestro_combinado(caminhos_planilhas):
+    dfs=[]
+    colunas_referencia = None
+
+    caminho_0 = caminhos_planilhas["Setores_CellDowntime_HMM_NE_0"]
+    df_0 = carregar_dados_maestro(caminho_0)
+    colunas_referencia = df_0.columns.tolist()
+    df_0['ORIGEM_ARQUIVO'] = "Setores_CellDowntime_HMM_NE_0"
+    dfs.append(df_0)
+
+    caminho_1 = caminhos_planilhas["Setores_CellDowntime_HMM_NE_1"]
+    df_1 = carregar_planilha_sem_cabecalho(caminho_1, colunas_referencia)
+    df_1['ORIGEM_ARQUIVO'] = "Setores_CellDowntime_HMM_NE_1"
+    dfs.append(df_1)
+    
+    return pd.concat(dfs, ignore_index=True)
 
 def aplicar_base_e_regras(df_trabalho, caminho_base):
     colunas_extras = [
@@ -203,8 +246,13 @@ def gerar_relatorio_geral(df):
 # ===============================================================
 
 def main():
+    pasta_temp = tempfile.mkdtemp()
+
     try:
-        df_bruto = carregar_dados_maestro(PLANILHA_INTERNA)
+
+        caminhos_planilhas = extrair_planilhas(CAMINHO_ZIP, pasta_temp)
+        df_bruto = carregar_dados_maestro_combinado(caminhos_planilhas)
+
         df_filtrado = processar_filtros_e_agrupamento(df_bruto)
         df_final = aplicar_base_e_regras(df_filtrado, CAMINHO_BASE)
 
@@ -225,6 +273,8 @@ def main():
         print("\n--- ERRO NO PROCESSAMENTO ---")
         print(f"Detalhes: {e}")
 
+    finally:
+        shutil.rmtree(pasta_temp, ignore_errors=True)
 
 if __name__ == "__main__":
     main()
