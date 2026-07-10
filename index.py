@@ -38,7 +38,7 @@ def limpar_valor(x):
 
 def forcar_colunas_para_string(df):
     colunas_texto = [
-        'IMPACTO', 'AFETACAO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
+        'IMPACTO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
         'RESPONSÁVEL', 'PRAZO', 'MODELO', 'COD. MODELO',
         'FABRICANTE', 'SS', 'BACKLOG'
     ]
@@ -174,7 +174,7 @@ def carregar_dados_maestro_combinado(caminhos_planilhas):
 
 def aplicar_base_e_regras(df_trabalho, caminho_base):
     colunas_extras = [
-        'IMPACTO', 'AFETACAO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
+        'IMPACTO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
         'RESPONSÁVEL', 'PRAZO', 'MODELO', 'COD. MODELO',
         'FABRICANTE', 'SS', 'BACKLOG'
     ]
