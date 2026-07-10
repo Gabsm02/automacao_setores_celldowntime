@@ -80,13 +80,14 @@ def extrair_planilhas(caminho_zip, pasta_destino):
         for nome_esperado in nomes_esperados:
             arquivo_encontrado = next((a for a in arquivos_no_zip if nome_esperado in a), None)
 
-        if arquivo_encontrado is None:
-            raise FileNotFoundError (
-                f"Arquivo '{nome_esperado}' não encontrado"
-            )
-        zip_ref.extract(arquivo_encontrado, pasta_destino)
-        caminhos_extraidos[nome_esperado] = os.path.join(pasta_destino, arquivo_encontrado)
-        return caminhos_extraidos
+            if arquivo_encontrado is None:
+                raise FileNotFoundError (
+                    f"Arquivo '{nome_esperado}' não encontrado"
+                )
+            zip_ref.extract(arquivo_encontrado, pasta_destino)
+            caminhos_extraidos[nome_esperado] = os.path.join(pasta_destino, arquivo_encontrado)
+
+    return caminhos_extraidos
 
 
 # ===============================================================
@@ -132,7 +133,8 @@ def processar_filtros_e_agrupamento(df):
     df[cols_preencher] = df[cols_preencher].ffill()
 
     # Filtros
-    df = df[(df.iloc[:, -1] >= 500) & (df.iloc[:, -2] > 0)]
+    df_para_filtro = df.drop(columns=['ORIGEM_ARQUIVO'], errors='ignore')
+    df = df[(df_para_filtro.iloc[:,-1] >= 500) & (df_para_filtro.iloc[:, -2] > 0)]
 
     colunas_chave = ['REGIONAL', 'UF', 'MUNICIPIO', 'CN', 'SITE', 'TECNOLOGIA', 'ERB']
     df_agrupado = df.groupby(colunas_chave).size().reset_index(name='TOTAL DE SETORES')
