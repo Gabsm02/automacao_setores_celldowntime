@@ -8,6 +8,9 @@ import requests
 import time
 import urllib3
 from dotenv import load_dotenv
+from openpyxl import load_workbook
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.utils import get_column_letter
 
 load_dotenv()
 
@@ -257,6 +260,37 @@ def gerar_relatorio_geral(df):
 
     print("Gráfico gerado com sucesso.")
 
+from openpyxl import load_workbook
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.utils import get_column_letter
+
+
+def formatar_como_tabela(caminho_excel, nome_planilha='Sheet1', nome_tabela='Tabela1'):
+    wb = load_workbook(caminho_excel)
+    ws = wb[nome_planilha]
+
+    n_linhas = ws.max_row
+    n_colunas = ws.max_column
+
+    ultima_coluna = get_column_letter(n_colunas)
+    intervalo = f"A1:{ultima_coluna}{n_linhas}"
+
+    tabela = Table(displayName=nome_tabela, ref=intervalo)
+
+    estilo = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    tabela.tableStyleInfo = estilo
+
+    ws.add_table(tabela)
+    wb.save(caminho_excel)
+
+
+
 
 # ===============================================================
 # MAIN
@@ -283,6 +317,7 @@ def main():
         gerar_relatorio_geral(df_final)
 
         df_final.to_excel(ARQUIVO_FINAL, index=False)
+        formatar_como_tabela(ARQUIVO_FINAL)
 
         print("\n--- SUCESSO! ---")
         print(f"Arquivo gerado: {ARQUIVO_FINAL}")
