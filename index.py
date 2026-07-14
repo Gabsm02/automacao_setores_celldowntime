@@ -230,36 +230,6 @@ def aplicar_base_e_regras(df_trabalho, caminho_base):
     return df_trabalho
 
 
-# ===============================================================
-# RELATÓRIO
-# ===============================================================
-
-def gerar_relatorio_geral(df):
-    contagem = df['MODELO'].dropna()
-
-    if contagem.empty:
-        print("Nenhum valor em 'MODELO' para gerar gráfico.")
-        return
-
-    contagem = contagem.value_counts()
-    num_modelos = len(contagem)
-
-    altura = (num_modelos * 0.4) + 2
-    fig, ax = plt.subplots(figsize=(12, altura))
-
-    bars = ax.barh(contagem.index, contagem.values, color='skyblue', edgecolor='black')
-    ax.invert_yaxis()
-    ax.bar_label(bars, padding=5)
-
-    plt.title('Quantidade Geral de Modelos')
-    plt.tight_layout()
-
-    caminho_grafico = r"C:\Users\40419159\OneDrive - Telefonica\Área de Trabalho\SetoresCelldowntime\Relatório de Modelos.png"
-    plt.savefig(caminho_grafico)
-    plt.close()
-
-    print("Gráfico gerado com sucesso.")
-
 from openpyxl import load_workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.utils import get_column_letter
@@ -314,7 +284,7 @@ def main():
         print("\nResumo BACKLOG:")
         print(df_final['BACKLOG'].value_counts(dropna=False))
 
-        gerar_relatorio_geral(df_final)
+        # gerar_relatorio_geral(df_final)
 
         df_final.to_excel(ARQUIVO_FINAL, index=False)
         formatar_como_tabela(ARQUIVO_FINAL)
