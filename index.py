@@ -42,7 +42,7 @@ def limpar_valor(x):
 def forcar_colunas_para_string(df):
     colunas_texto = [
         'IMPACTO', 'TA', 'ACOMPANHAMENTO', 'STATUS MACRO',
-        'RESPONSÁVEL', 'PRAZO', 'MODELO', 'COD. MODELO',
+        'RESPONSÁVEL', 'MODELO', 'COD. MODELO',
         'FABRICANTE', 'SS', 'BACKLOG'
     ]
 
@@ -60,9 +60,7 @@ def formatar_data_br(df, colunas_data):
                 df[col],
                 errors='coerce',
                 dayfirst=True
-            ).dt.strftime('%d/%m/%Y')
-
-            df[col] = df[col].fillna("")
+            ).dt.date
 
     return df
 
@@ -236,35 +234,38 @@ from openpyxl.utils import get_column_letter
 
 
 def formatar_como_tabela(caminho_excel, nome_planilha='Sheet1', nome_tabela='Tabela1'):
-    wb = load_workbook(caminho_excel)
-    ws = wb[nome_planilha]
+   wb = load_workbook(caminho_excel)
+   ws = wb[nome_planilha]
+   n_linhas = ws.max_row
+   n_colunas = ws.max_column
 
-    n_linhas = ws.max_row
-    n_colunas = ws.max_column
+   coluna_prazo_idx = None
+  
+   for col in range(1, n_colunas + 1):
+       if str(ws.cell(row=1, column=col).value).upper() == 'PRAZO':
+           coluna_prazo_idx = col
+           break
+   
+   if coluna_prazo_idx:
+       for row in range(2, n_linhas + 1):
+           celula = ws.cell(row=row, column=coluna_prazo_idx)
+           celula.number_format = 'dd/mm/yyyy'
+   
+   ultima_coluna = get_column_letter(n_colunas)
+   intervalo = f"A1:{ultima_coluna}{n_linhas}"
+   tabela = Table(displayName=nome_tabela, ref=intervalo)
+   estilo = TableStyleInfo(
+       name="TableStyleMedium9",
+       showFirstColumn=False,
+       showLastColumn=False,
+       showRowStripes=True,
+       showColumnStripes=False
+   )
+   tabela.tableStyleInfo = estilo
+   ws.add_table(tabela)
+   wb.save(caminho_excel)
 
-    ultima_coluna = get_column_letter(n_colunas)
-    intervalo = f"A1:{ultima_coluna}{n_linhas}"
 
-    tabela = Table(displayName=nome_tabela, ref=intervalo)
-
-    estilo = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    tabela.tableStyleInfo = estilo
-
-    ws.add_table(tabela)
-    wb.save(caminho_excel)
-
-
-
-
-# ===============================================================
-# MAIN
-# ===============================================================
 
 def main():
     pasta_temp = tempfile.mkdtemp()
@@ -284,9 +285,10 @@ def main():
         print("\nResumo BACKLOG:")
         print(df_final['BACKLOG'].value_counts(dropna=False))
 
-        # gerar_relatorio_geral(df_final)
 
-        df_final.to_excel(ARQUIVO_FINAL, index=False)
+        with pd.ExcelWriter(ARQUIVO_FINAL, engine='openpyxl', datetime_format='DD/MM/YYYY') as writer:
+            df_final.to_excel(writer, index=False)
+        
         formatar_como_tabela(ARQUIVO_FINAL)
 
         print("\n--- SUCESSO! ---")
