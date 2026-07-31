@@ -1,35 +1,3 @@
-### Aprimorei meu pipeline de ETL! 🚀
-
-Recentemente, compartilhei aqui sobre um pipeline de ETL em que estava trabalhando. Hoje trago uma atualização: o processo passou por uma grande otimização! Embora não seja 100% automático, reduzi drasticamente o trabalho braçal e o tempo de execução.
-
-### ⏳ Como era antes?
-
-O fluxo antigo demandava cerca de **10 minutos** diários de muita atenção. Eu precisava entrar no SharePoint, exportar a planilha, aguardar o download terminar, rodar o código de processamento e gerar o arquivo final. Depois disso, ainda precisava copiar as linhas manualmente, voltar ao SharePoint, apagar os dados antigos e só então colar a nova lista. Era um trabalho bem repetitivo.
-
-### ⚡ Como funciona agora?
-
-Para otimizar isso, desenvolvi duas automações utilizando o **Power Automate**, integradas com o meu script em **Python**:
-
-- **Automação Matinal:** Todos os dias, às 6h da manhã, a primeira rotina exporta a planilha do SharePoint e a salva automaticamente na minha pasta local.
-- **Ação Manual (O gatilho):** Quando inicio meu dia, só preciso me conectar à VPN e dar um clique para rodar o arquivo Python. O script faz todo o processamento do ETL e salva a planilha final.
-- **Sincronização via OneDrive Business:** A segunda automação fica monitorando essa pasta. Assim que identifica que o arquivo final foi modificado pelo Python, ela aciona o SharePoint automaticamente e substitui os dados antigos pelas novas linhas processadas.
-
-Vale ressaltar que eu poderia programar o Python para fazer essa busca totalmente sozinho, mas o proxy corporativo bloqueia requisições vindas de computadores que não são considerados seguros.
-
----
-
-### ⏱️ O Resultado?
-
-Com esse novo fluxo, eliminei o trabalho braçal e as esperas desnecessárias. Um processo que antes levava 10 minutos, agora exige apenas 3 minutos. E o maior ganho nem foi o tempo, mas a autonomia: o processo não depende mais ativamente de mim, permitindo que qualquer pessoa consiga executá-lo com facilidade.
-
-### 💡 Vamos automatizar juntos?
-
-Agora quero saber de vocês: será que existe algum processo aí na sua rotina que você gostaria de automatizar? Deixe nos comentários ou me mande uma mensagem, quem sabe eu posso te ajudar a encontrar a solução ideal!
-
-#EngenhariaDeDados #PowerAutomate #SharePoint #Python #ETL #Automacao #Produtividade #DataEngineering
-
----
-
 # 📡 Automação de Consolidação de Dados ERB & Backlog
 
 Automação híbrida (Python + Power Automate) que centraliza, higieniza e consolida dados de estações rádio base (ERB) e status de backlog. O pipeline substitui um processo braçal de download, tratamento em planilhas Excel e upload manual, orquestrando a atualização direta no SharePoint.
